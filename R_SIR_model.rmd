@@ -1,0 +1,168 @@
+---
+title: "SIR_model"
+author: "laura_hinojosa"
+date: "1/12/2021"
+output: 
+    prettydoc::html_pretty:
+    theme: tactile
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+First, we must set some initial values that describe our initial population. We write them down separately for easier changes.
+
+```{r}
+#VACCINATION STRATEGY
+strategy<-'mobility' #'mortality'
+
+#INITIAL AMOUNT OF PEOPLE IN EACH SUBGROUP
+
+#age group 0-20
+S_1<- 8000
+I_1<- 1
+#age group 21-40
+S_2<- 7596
+I_2<- 1
+#age group 41-60
+S_3<- 4254
+I_3<- 1
+#age group 60+
+S_4<- 5647
+I_4<- 2
+
+#Put them in vectors for easier access
+S<-c(S_1, S_2, S_3, S_4)
+I<-c(I_1, I_2, I_3, I_4)
+
+#total dead
+D<- 0
+#total recuperated
+R<- 0
+
+#average daily vaccination capacity (consider efficacy)
+V<- 0
+
+#SUBGROUP parameters
+
+#death rate
+k<-c(0.01,0.02,0.09,0.13)
+#recuperation rate
+b<-1-k
+#mobility
+a<-c(2.25,3,2.75,2)
+
+#vaccines per group per day, set to 0 initially
+lambda<-c(0,0,0,0)
+```
+
+
+Our population values will be saved in a data frame for easy category transfer.
+```{r}
+pop<-c(rbind(S,I),R,D)
+names(pop)<-c('S1','I1','S2','I2','S3','I3','S4','I4','D','R')
+pop<-as.data.frame(pop)
+```
+
+
+There are four possible events: Infection, death, vaccination and recuperation. But since we're interested in classifying susceptible and infected individuals into four age-based subgroups we end up with a total of 16 scenarios and 10 subgroups.
+
+```{r}
+#this way we can simply add the vector of the event to our pop counter
+poss<-data.frame(inf1=c(-1,1,rep(0,8)),
+                 inf2=c(0,0,-1,1,rep(0,6)),
+                 inf3=c(rep(0,4),-1,1,rep(0,4)),
+                 inf4=c(rep(0,6),-1,1,0,0),
+                 die1=c(0,-1,rep(0,6),1,0),
+                 die2=c(rep(0,3),-1,rep(0,4),1,0),
+                 die3=c(rep(0,5),-1,0,0,1,0),
+                 die4=c(rep(0,7),-1,1,0),
+                 rec1=c(0,-1,rep(0,7),1),
+                 rec2=c(rep(0,3),-1,rep(0,5),1),
+                 rec3=c(rep(0,5),-1,rep(0,3),1),
+                 rec4=c(rep(0,7),-1,0,1),
+                 vac1=c(-1,rep(0,8),1),
+                 vac2=c(0,0,-1,rep(0,6),1),
+                 vac3=c(rep(0,4),-1,rep(0,4),1),
+                 vac4=c(rep(0,6),-1,0,0,1))
+```
+
+
+Each scenario has a different time of occurrence, determined by an exponential probability measure.
+
+```{r}
+#we will call this function every time we iterate
+get_times<-function(pop,params){
+  times<-c(rep(0,16))
+  #population
+  N<-sum(pop)
+  #iterate over each group
+  for (i in 1:4){
+    #infection
+    times[i]<-exp(params$a[i]*pop[(2*i-1),]*pop[(2*i),]/N)
+    #death
+    times[2*i]<-exp(params$k[i]*pop[(2*i),])
+    #vaccination
+    times[3*i]<-exp(params$lambda[i])
+    #recuperation
+    times[4*i]<-exp(params$b[i]*pop[(2*i),])
+  }
+  return(times)
+}
+```
+
+
+Each vaccine strategy will prioritize vaccinating a particular age-group based on their parameters.
+```{r}
+set_lambda<-function(S, params, strategy){
+  #id parameter of interest from strategy
+  if (strategy=='mobility'){
+    interest<-params
+  }
+  #obtain the most susceptible group for the given parameter in terms of N
+  
+  #set each lambda accordingly
+  lambda<-
+  #return new lambda vector
+  return(lambda)
+}
+```
+
+
+```{r}
+#put subgroup parameters into a data frame too, for easier handling
+params<-data.frame(a, b, k, lambda)
+```
+
+
+
+
+Main iterator
+```{r}
+t<-0
+limit<-100
+
+while(t<limit){
+  #update lambda values
+  #params$lambda<-set_lambda()
+  #obtain times
+  times<-get_times(pop$pop,params)
+  chosen<-which(times==min(times[which(times>0)]))[1]
+  #execute next event
+  pop$pop<-pop$pop+poss[chosen]
+  #accumulate time
+  t<-t+times[chosen]
+  #generate report
+  print(times[which(times==min(times[which(times>0)]))[1]])
+}
+```
+
+
+
+
+
+
+

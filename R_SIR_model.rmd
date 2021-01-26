@@ -11,13 +11,15 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+WARNING:This version is outdated
+
 
 
 First, we must set some initial values that describe our initial population. We write them down separately for easier changes.
 
 ```{r}
 #VACCINATION STRATEGY
-strategy<-'mobility' #'mortality'
+strategy<-c('mobility','mortality')
 
 #INITIAL AMOUNT OF PEOPLE IN EACH SUBGROUP
 
@@ -44,7 +46,7 @@ D<- 0
 R<- 0
 
 #average daily vaccination capacity (consider efficacy)
-V<- 0
+V<- 100
 
 #SUBGROUP parameters
 
@@ -62,9 +64,8 @@ lambda<-c(0,0,0,0)
 
 Our population values will be saved in a data frame for easy category transfer.
 ```{r}
-pop<-c(rbind(S,I),R,D)
-names(pop)<-c('S1','I1','S2','I2','S3','I3','S4','I4','D','R')
-pop<-as.data.frame(pop)
+pop<-as.vector(c(rbind(S,I),R,D))
+#names(pop)<-c('S1','I1','S2','I2','S3','I3','S4','I4','D','R')
 ```
 
 
@@ -90,11 +91,16 @@ poss<-data.frame(inf1=c(-1,1,rep(0,8)),
                  vac4=c(rep(0,6),-1,0,0,1))
 ```
 
+Each age group has different death rates, mobility, etc
+```{r}
+#put subgroup parameters into a data frame too, for easier handling
+params<-data.frame(a, b, k, lambda)
+```
 
 Each scenario has a different time of occurrence, determined by an exponential probability measure.
 
 ```{r}
-#we will call this function every time we iterate
+#we will call this function every time we iterate inside the simulation
 get_times<-function(pop,params){
   times<-c(rep(0,16))
   #population
@@ -102,61 +108,85 @@ get_times<-function(pop,params){
   #iterate over each group
   for (i in 1:4){
     #infection
-    times[i]<-exp(params$a[i]*pop[(2*i-1),]*pop[(2*i),]/N)
+    times[i]<-rexp(n=1,rate=params$a[i]*pop[(2*i-1)]*pop[(2*i)]/N)
     #death
-    times[2*i]<-exp(params$k[i]*pop[(2*i),])
+    times[2*i]<-rexp(n=1,rate=params$k[i]*pop[(2*i)])
     #vaccination
-    times[3*i]<-exp(params$lambda[i])
+    times[3*i]<-rexp(n=1,rate=params$lambda[i])
     #recuperation
-    times[4*i]<-exp(params$b[i]*pop[(2*i),])
+    times[4*i]<-rexp(n=1,rate=params$b[i]*pop[(2*i)])
   }
   return(times)
+}
+```
+
+Vaccines will be distributed differently according to priority
+```{r}
+get_lambda <- function(V, N, P){
+  #distribute and normalize
+  lambda<-V*N*P/sum(N*P)
+  return(lambda)
 }
 ```
 
 
 Each vaccine strategy will prioritize vaccinating a particular age-group based on their parameters.
 ```{r}
-set_lambda<-function(S, params, strategy){
+set_lambda<-function(S, params, strategy, V){
   #id parameter of interest from strategy
   if (strategy=='mobility'){
-    interest<-params
+    interest<-params$a
+  }else if(strategy=='mortality'){
+    interest<-params$k
   }
-  #obtain the most susceptible group for the given parameter in terms of N
-  
-  #set each lambda accordingly
-  lambda<-
+  #get lambda values according to priority parameter
+  lambda<-get_lambda(P=interest,V=V,N=S)
   #return new lambda vector
   return(lambda)
 }
 ```
 
 
-```{r}
-#put subgroup parameters into a data frame too, for easier handling
-params<-data.frame(a, b, k, lambda)
-```
-
-
-
 
 Main iterator
 ```{r}
-t<-0
-limit<-100
+#we are interested in two values
+out_time<-vector(mode='numeric')
+out_dead<-vector(mode='numeric')
 
-while(t<limit){
-  #update lambda values
-  #params$lambda<-set_lambda()
-  #obtain times
-  times<-get_times(pop$pop,params)
-  chosen<-which(times==min(times[which(times>0)]))[1]
-  #execute next event
-  pop$pop<-pop$pop+poss[chosen]
-  #accumulate time
-  t<-t+times[chosen]
-  #generate report
-  print(times[which(times==min(times[which(times>0)]))[1]])
+#number of iterations
+limit<-1
+#herd immunity at 75 percent
+herd_immunity<-sum(pop)*0.75
+
+#we will run the simulations with a range of probabilities
+for (j in 1:limit){
+  #time accumulator 
+  t<-0
+  #new probability parameters for iteration
+  strategyR<-c(j/limit,1-j/limit)
+  print(strategyR)
+  
+  #run simulation
+  while(pop[10]<=herd_immunity){
+    #select strategy according to probabilities
+    strat<-sample(c('mobility','mortality'), size=1, prob=strategyR)
+    #update lambda values according to strategy
+    params$lambda<-set_lambda(S=pop[c(1,3,5,7)],params=params,strategy=strat, V=V)
+    #obtain times
+    times<-get_times(pop,params)
+    #identify next event
+    chosen<-which(times==min(times[which(times>0)]))[1]
+    #execute next event
+    pop<-pop+(poss[,chosen])
+    #accumulate time
+    t<-t+times[chosen]
+  }
+  #save time and number of deaths for iteration
+  out_time<-append(out_time,t,after=j)
+  out_dead<-append(out_dead,pop[9],after=j)
+  #reset population values for new iterations
+  pop<-as.vector(c(rbind(S,I),R,D))
 }
 ```
 

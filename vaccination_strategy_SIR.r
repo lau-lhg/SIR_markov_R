@@ -80,11 +80,11 @@ get_times<-function(pop,params){
     #infection
     times[i]<-rexp(n=1,rate=params$a[i]*pop[(2*i-1)]*infected/N)
     #death
-    times[2*i]<-rexp(n=1,rate=params$k[i]*pop[(2*i)])
+    times[i+4]<-rexp(n=1,rate=params$k[i]*pop[(2*i)])
     #vaccination
-    times[3*i]<-rexp(n=1,rate=params$lambda[i])
+    times[i+12]<-rexp(n=1,rate=params$lambda[i])
     #recuperation
-    times[4*i]<-rexp(n=1,rate=params$b[i]*pop[(2*i)])
+    times[i+8]<-rexp(n=1,rate=params$b[i]*pop[(2*i)])
   }
   return(times)
 }

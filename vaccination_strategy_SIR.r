@@ -127,7 +127,7 @@ for (j in 1:limit){
   strategyR<-c(j/limit,1-j/limit)
   
   #run simulation
-  while( sum(pop[9])<=herd_immunity & sum(pop[c(2,4,6,8)])>=0 ){
+  while( pop[10]<=herd_immunity & sum(pop[c(2,4,6,8)])>=0 ){
     #select strategy according to probabilities
     strat<-sample(c('mobility','mortality'), size=1, prob=strategyR)
     #update lambda values according to strategy
@@ -146,9 +146,9 @@ for (j in 1:limit){
   }
   #save time and number of deaths for iteration
   out_time<-append(out_time,t,after=j)
-  out_dead<-append(out_dead,pop[10],after=j)
+  out_dead<-append(out_dead,pop[9],after=j)
   #reset population values for new iterations
-  #pop<-as.vector(c(rbind(S,I),D,R))
+  pop<-as.vector(c(rbind(S,I),D,R))
 }
 
 

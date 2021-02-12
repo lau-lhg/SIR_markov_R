@@ -1,0 +1,60 @@
+---
+title: "visualizing_results"
+author: "laura_hinojosa"
+date: "2/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#obtain dataframe from filtered result file
+setwd("/home/laurahg/Documents/SIR_markov_R/FINAL/")
+att0<-read.csv('att1.csv')
+```
+
+```{r}
+#get amount of iterations
+times<-length(unique(att0$mobility))
+tots<-129854
+```
+
+```{r}
+#fix my stupid mistake
+#copy into new data frame 
+att1<-att0
+#for(i in 2:2){att1$vaccines[i]<-att0$vaccines[i]-att0$vaccines[c(i-1)]}
+#for(i in 2:2){att1$total_cases[i]<-att0$total_cases[i]-att0$total_cases[c(i-1)]}
+```
+
+
+```{r}
+boxplot((att1$vaccines/tots*100)~att1$mobility, xlab='Estrategia (P movilidad)',ylab='Población Vacunada (%)', main='Vacunación', col=topo.colors(n=times))
+```
+```{r}
+boxplot(att1$pandemic_time~att1$mobility, xlab='Estrategia (P movilidad)',ylab='Tiempo (k días)', main='Tiempo Hasta Inmunidad de Rebaño', col=rainbow(n=times))
+```
+```{r}
+boxplot((att1$death_toll/tots*100)~att1$mobility, xlab='Estrategia (P movilidad)',ylab='Población (%)', main='Muertes', col=heat.colors(n=times))
+```
+```{r}
+boxplot((att1$total_cases/tots*100)~att1$mobility, xlab='Estrategia (P movilidad)',ylab='Población (%)', main='Casos Nuevos Hasta Inmunidad de Rebaño', col=cm.colors(n=times))
+```
+```{r}
+plot(y=att1$vaccines/tots*100, x=att1$total_cases/tots*100, col=(rep(rainbow(n=3),each=5)),pch=rep(0:3,each=5), ylab='Población vacunada (%)', xlab='Población Infectada (%)', main='Trade-off')
+
+legend('bottomleft',legend=seq(from=0, to=1, by=0.5),col=(rainbow(n=3)),pch=0:3)
+```
+```{r}
+plot(y=att1$death_toll/tots*100, x=att1$total_cases/tots*100, col=(rep(rainbow(n=3),each=5)),pch=rep(0:3,each=5), ylab='Población Muerta (%)', xlab='Población Infectada (%)', main='Trade-off Mortalidad')
+
+legend('topleft',legend=seq(from=0, to=1, by=0.5),col=(rainbow(n=3)),pch=0:3)
+```
+
+
+
+
+
+
